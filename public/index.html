@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube → 中文访谈对话稿</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ─── 章节卡片 ─── */
+    .chapter-card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      transition: box-shadow 0.2s;
+    }
+    .chapter-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .chapter-card .w1h-btn {
+      opacity: 0.4;
+      transition: opacity 0.2s, background 0.15s;
+    }
+    .chapter-card:hover .w1h-btn {
+      opacity: 1;
+    }
+
+    /* ─── 文章正文排版 ─── */
+    .article-content h1 {
+      font-size: 1.5rem; font-weight: 700;
+      margin-bottom: 1rem; color: #111827;
+    }
+    .article-content h2 {
+      font-size: 1.1rem; font-weight: 600;
+      color: #1f2937;
+    }
+    .article-content p {
+      margin-bottom: 0.6rem; line-height: 1.75;
+      color: #374151; font-size: 0.95rem;
+    }
+    .article-content blockquote {
+      border-left: 3px solid #818cf8;
+      padding: 6px 12px; margin: 10px 0;
+      background: #f5f3ff; border-radius: 4px;
+      font-size: 0.875rem; color: #4f46e5;
+    }
+
+    /* ─── 5W1H 抽屉 ─── */
+    #drawer-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.25);
+      z-index: 40; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    #drawer-overlay.open { opacity: 1; pointer-events: auto; }
+
+    #drawer {
+      position: fixed; top: 0; right: -420px; width: 400px;
+      height: 100%; background: #fff;
+      z-index: 50;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+      transition: right 0.3s ease;
+      display: flex; flex-direction: column;
+    }
+    #drawer.open { right: 0; }
+
+    #drawer-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px; border-bottom: 1px solid #e5e7eb;
+    }
+    #drawer-body {
+      flex: 1; overflow-y: auto; padding: 20px;
+    }
+    #drawer-body table { width: 100%; }
+    #drawer-body td {
+      padding: 10px 8px; border-bottom: 1px solid #f3f4f6;
+      vertical-align: top; font-size: 0.9rem; line-height: 1.6;
+    }
+    #drawer-body td:first-child {
+      width: 52px; font-weight: 700; color: #4f46e5;
+      white-space: nowrap;
+    }
+
+    /* ─── 打字光标 ─── */
+    .typing-cursor .article-content > section:last-of-type::after {
+      content: '▌'; display: inline;
+      animation: blink 1s steps(1) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* ─── 全局 ─── */
+    body {
+      background: #f8fafc; min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <!-- 主布局：左右两栏 -->
+  <div class="flex max-w-6xl mx-auto min-h-screen">
+    <!-- ====== 左侧：输入面板 ====== -->
+    <aside class="w-80 shrink-0 p-6 border-r border-gray-200 bg-white min-h-screen sticky top-0">
+      <h1 class="text-lg font-bold text-gray-900 leading-tight">
+        YouTube<br>→ 中文访谈对话稿
+      </h1>
+      <p class="text-xs text-gray-400 mt-1 mb-5">流式生成 · 章节 5W1H · 模型可切换</p>
+
+      <form id="form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">YouTube 视频链接</label>
+          <input id="url" type="url" required
+            placeholder="https://youtube.com/watch?v=..."
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">生成要求（可选）</label>
+          <textarea id="requirements" rows="5"
+            placeholder="任务类型：科技播客总结 / 商业分析报告 / 技术文档 / 学习笔记…&#10;&#10;输出风格：简洁精炼 / 深入详细 / 叙事故事 / 数据驱动 / 批判思辨&#10;&#10;目标受众：产品经理 / 技术工程师 / 投资人 / 普通读者 / 学生&#10;&#10;约束条件：不超过800字 / 避免技术术语 / 重点突出争议点 / 加入案例"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"></textarea>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <select id="model" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg">
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro（质量）</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash（速度）</option>
+          </select>
+          <button type="submit" id="submit-btn"
+            class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+            生成文章
+          </button>
+        </div>
+      </form>
+
+      <div id="status" class="hidden mt-4 text-xs text-gray-400 leading-relaxed"></div>
+      <div id="error" class="hidden mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-xs"></div>
+    </aside>
+
+    <!-- ====== 右侧：文章输出 ====== -->
+    <main class="flex-1 p-6">
+      <div id="article" class="article-content hidden"></div>
+      <div id="empty-state" class="text-center py-24 text-gray-400 text-sm">
+        <p class="mb-1">👋 输入 YouTube 链接，生成中文访谈对话稿</p>
+        <p class="text-xs">可切换模型、添加生成要求控制输出风格</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- ====== 5W1H 抽屉 ====== -->
+  <div id="drawer-overlay"></div>
+  <div id="drawer">
+    <div id="drawer-header">
+      <span id="drawer-title" class="text-sm font-semibold text-gray-900">5W1H 分析</span>
+      <button id="drawer-close" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+    </div>
+    <div id="drawer-body">
+      <div id="drawer-skeleton" class="text-xs text-gray-400">正在分析该章节…</div>
+      <div id="drawer-content" class="hidden"></div>
+      <div id="drawer-error" class="hidden text-xs text-red-500"></div>
+    </div>
+  </div>
+
+<script>
+const form = document.getElementById('form');
+const articleEl = document.getElementById('article');
+const emptyState = document.getElementById('empty-state');
+const statusEl = document.getElementById('status');
+const errorEl = document.getElementById('error');
+const submitBtn = document.getElementById('submit-btn');
+
+const drawer = document.getElementById('drawer');
+const overlay = document.getElementById('drawer-overlay');
+const drawerTitle = document.getElementById('drawer-title');
+const drawerContent = document.getElementById('drawer-content');
+const drawerSkeleton = document.getElementById('drawer-skeleton');
+const drawerError = document.getElementById('drawer-error');
+const drawerClose = document.getElementById('drawer-close');
+
+let currentArticleId = null;
+let currentModel = null;
+let chapterContainers = [];
+let hasTitle = false;
+
+// ─── 抽屉 ───
+function openDrawer(title) {
+  drawerTitle.textContent = title;
+  drawerContent.classList.add('hidden');
+  drawerSkeleton.classList.remove('hidden');
+  drawerError.classList.add('hidden');
+  drawer.classList.add('open');
+  overlay.classList.add('open');
+}
+function closeDrawer() {
+  drawer.classList.remove('open');
+  overlay.classList.remove('open');
+}
+overlay.addEventListener('click', closeDrawer);
+drawerClose.addEventListener('click', closeDrawer);
+
+// ─── 提交 ───
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const url = document.getElementById('url').value.trim();
+  const requirements = document.getElementById('requirements').value.trim() || undefined;
+  const model = document.getElementById('model').value;
+  if (!url) return;
+
+  articleEl.innerHTML = '';
+  articleEl.classList.remove('hidden');
+  emptyState.classList.add('hidden');
+  errorEl.classList.add('hidden');
+  statusEl.textContent = '🔍 正在生成…';
+  statusEl.classList.remove('hidden');
+  submitBtn.disabled = true;
+  currentArticleId = null;
+  currentModel = model;
+  chapterContainers = [];
+  hasTitle = false;
+
+  try {
+    const resp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ url, userRequirements: requirements, model }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.error || `HTTP ${resp.status}`);
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let sseBuffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      sseBuffer += decoder.decode(value, { stream: true });
+      const { parsed, remaining } = parseSSE(sseBuffer);
+      sseBuffer = remaining;
+      for (const evt of parsed) handleSSEEvent(evt);
+    }
+    statusEl.classList.add('hidden');
+  } catch (err) {
+    errorEl.textContent = '❌ ' + err.message;
+    errorEl.classList.remove('hidden');
+    statusEl.classList.add('hidden');
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+// ─── SSE ───
+function handleSSEEvent(evt) {
+  switch (evt.event) {
+    case 'chapter': {
+      const ch = JSON.parse(evt.data);
+      statusEl.textContent = `📝 章节：${ch.title}`;
+      createChapterCard(ch.id, ch.title, ch.index);
+      break;
+    }
+    case 'chunk':
+      appendContent(evt.data);
+      break;
+    case 'done': {
+      const p = JSON.parse(evt.data);
+      currentArticleId = p.articleId;
+      statusEl.textContent = '✅ 生成完成';
+      break;
+    }
+    case 'error': {
+      const p = JSON.parse(evt.data);
+      statusEl.textContent = '⚠️ 中断';
+      errorEl.textContent = '❌ ' + p.message;
+      errorEl.classList.remove('hidden');
+      break;
+    }
+  }
+}
+
+// ─── 渲染：创建章节卡片 ───
+function createChapterCard(id, title, index) {
+  const card = document.createElement('div');
+  card.className = 'chapter-card';
+  card.dataset.chapterId = id;
+
+  const header = document.createElement('div');
+  header.className = 'flex items-center justify-between mb-3';
+
+  const h2 = document.createElement('h2');
+  h2.textContent = title;
+  header.appendChild(h2);
+
+  const btn = document.createElement('button');
+  btn.className = 'w1h-btn shrink-0 ml-3 px-3 py-1 text-xs font-medium bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors border border-indigo-200';
+  btn.innerHTML = '🧠 5W1H';
+  btn.addEventListener('click', () => handle5W1H(id, title));
+  header.appendChild(btn);
+
+  card.appendChild(header);
+
+  const body = document.createElement('div');
+  body.className = 'chapter-body';
+  card.appendChild(body);
+
+  if (index === 0 && !hasTitle) {
+    articleEl.appendChild(card);
+  } else {
+    articleEl.appendChild(card);
+  }
+  chapterContainers.push({ id, body, card });
+}
+
+// ─── 渲染：追加内容 ───
+function appendContent(html) {
+  // 剥离 <section> 和 </section> 标签——前端用 chapter 事件管理章节容器
+  let cleaned = html
+    .replace(/<section\s+data-chapter-id="[^"]*"\s+data-title="[^"]*"[^>]*>/gi, '')
+    .replace(/<\/section>/gi, '');
+
+  if (!cleaned) return;
+
+  const target = chapterContainers.length > 0
+    ? chapterContainers[chapterContainers.length - 1].body
+    : articleEl;
+
+  target.insertAdjacentHTML('beforeend', cleaned);
+}
+
+// ─── 5W1H ───
+async function handle5W1H(chapterId, title) {
+  if (!currentArticleId) {
+    alert('请等待文章生成完成');
+    return;
+  }
+  openDrawer(title);
+
+  try {
+    const resp = await fetch('/api/5w1h', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ articleId: currentArticleId, chapterId, model: currentModel }),
+    });
+    if (!resp.ok) {
+      const e = await resp.json();
+      throw new Error(e.error || `HTTP ${resp.status}`);
+    }
+    const r = await resp.json();
+    drawerSkeleton.classList.add('hidden');
+    drawerContent.classList.remove('hidden');
+    drawerContent.innerHTML = `<table>
+      ${row('Who', r.who)}${row('What', r.what)}${row('When', r.when)}
+      ${row('Where', r.where)}${row('Why', r.why)}${row('How', r.how)}
+    </table>`;
+  } catch (err) {
+    drawerSkeleton.classList.add('hidden');
+    drawerError.classList.remove('hidden');
+    drawerError.textContent = '❌ ' + err.message;
+  }
+}
+
+function row(label, val) {
+  return `<tr><td>${esc(label)}</td><td>${esc(val ?? '')}</td></tr>`;
+}
+
+// ─── 工具 ───
+function parseSSE(text) {
+  const parsed = [];
+  const lines = text.split('\n');
+  let event = null, data = '', lastIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith('event: ')) event = line.slice(7);
+    else if (line.startsWith('data: ')) data = line.slice(6);
+    else if (line === '' && event) {
+      parsed.push({ event, data });
+      event = null; data = ''; lastIdx = i;
+    }
+  }
+  const remaining = lastIdx >= 0 ? lines.slice(lastIdx + 1).join('\n') : text;
+  return { parsed, remaining };
+}
+function esc(v) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(v ?? ''));
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>

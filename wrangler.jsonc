@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "youtube-to-article",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-01",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "CONTEXT_KV",
+      "id": "723441ef4e8942de8095300058575917"
+    }
+  ],
+  "vars": {
+    "CONTEXT_TTL_SECONDS": "3600"
+  }
+}

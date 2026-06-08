@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.dev.vars
+CLAUDE.md
+wrangler.toml

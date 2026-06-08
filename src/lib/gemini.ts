@@ -5,7 +5,7 @@ type ModelId = (typeof ALLOWED_MODELS)[number];
 
 export function validateModel(model: string): ModelId {
   if (ALLOWED_MODELS.includes(model as ModelId)) return model as ModelId;
-  return 'gemini-2.5-pro';
+  return 'gemini-2.5-flash';
 }
 
 export async function* streamGenerate(

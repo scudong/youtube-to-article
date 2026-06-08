@@ -1,0 +1,29 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - heading "YouTube → 中文访谈对话稿" [level=1] [ref=e4]:
+        - text: YouTube
+        - text: → 中文访谈对话稿
+      - paragraph [ref=e5]: 流式生成 · 章节 5W1H · 模型可切换
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - generic [ref=e8]: YouTube 视频链接
+          - textbox "https://youtube.com/watch?v=..." [ref=e9]
+        - generic [ref=e10]:
+          - generic [ref=e11]: 生成要求（可选）
+          - textbox "任务类型：科技播客总结 / 商业分析报告 / 技术文档 / 学习笔记… 输出风格：简洁精炼 / 深入详细 / 叙事故事 / 数据驱动 / 批判思辨 目标受众：产品经理 / 技术工程师 / 投资人 / 普通读者 / 学生 约束条件：不超过800字 / 避免技术术语 / 重点突出争议点 / 加入案例" [ref=e12]:
+            - /placeholder: "任务类型：科技播客总结 / 商业分析报告 / 技术文档 / 学习笔记…\n\n输出风格：简洁精炼 / 深入详细 / 叙事故事 / 数据驱动 / 批判思辨\n\n目标受众：产品经理 / 技术工程师 / 投资人 / 普通读者 / 学生\n\n约束条件：不超过800字 / 避免技术术语 / 重点突出争议点 / 加入案例"
+        - generic [ref=e13]:
+          - combobox [ref=e14]:
+            - option "Gemini 2.5 Pro（质量）" [selected]
+            - option "Gemini 2.5 Flash（速度）"
+          - button "生成文章" [ref=e15] [cursor=pointer]
+    - main [ref=e16]:
+      - generic [ref=e17]:
+        - paragraph [ref=e18]: 👋 输入 YouTube 链接，生成中文访谈对话稿
+        - paragraph [ref=e19]: 可切换模型、添加生成要求控制输出风格
+  - generic [ref=e20]:
+    - generic [ref=e21]:
+      - generic [ref=e22]: 5W1H 分析
+      - button "×" [ref=e23] [cursor=pointer]
+    - generic [ref=e25]: 正在分析该章节…

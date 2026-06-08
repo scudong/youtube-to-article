@@ -1,0 +1,18 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - heading "YouTube → 中文访谈对话稿" [level=1] [ref=e4]
+    - paragraph [ref=e5]: 输入视频链接，流式生成结构化中文文章
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]: YouTube 视频链接
+      - textbox "https://www.youtube.com/watch?v=xRh2sVcNXQ8" [ref=e9]
+    - generic [ref=e10]:
+      - generic [ref=e11]: 生成要求（可选）
+      - textbox "例：面向产品经理，突出商业洞察，使用简洁风格" [ref=e12]
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: 模型
+        - combobox [ref=e16]:
+          - option "Gemini 2.5 Pro（质量优先）" [selected]
+          - option "Gemini 2.5 Flash（速度优先）"
+      - button "生成文章" [ref=e17] [cursor=pointer]

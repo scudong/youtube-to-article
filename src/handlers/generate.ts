@@ -5,6 +5,12 @@ import { saveContext, type ChapterMeta } from '../lib/contextStore.js';
 import { toSSE, toSSEJSON } from '../lib/sse.js';
 import { buildArticlePrompt } from '../prompts.js';
 
+const CSS_BLOCK_RE = /<style[^>]*>[\s\S]*?<\/style>/gi;
+
+function stripCSS(html: string): string {
+  return html.replace(CSS_BLOCK_RE, '');
+}
+
 interface GenerateBody {
   url: string;
   userRequirements?: string;
@@ -93,9 +99,10 @@ async function processStream(
         const flushEnd = safePoint > 0 ? safePoint : buffer.length;
         const toFlush = buffer.slice(0, flushEnd);
 
-        if (toFlush) {
-          fullHtml += toFlush;
-          writer.write(encoder.encode(toSSE('chunk', toFlush)));
+        const cleaned = stripCSS(toFlush);
+        if (cleaned) {
+          fullHtml += cleaned;
+          writer.write(encoder.encode(toSSE('chunk', cleaned)));
         }
         buffer = buffer.slice(flushEnd);
       }
@@ -107,8 +114,11 @@ async function processStream(
     }
 
     if (buffer) {
-      fullHtml += buffer;
-      writer.write(encoder.encode(toSSE('chunk', buffer)));
+      const cleaned = stripCSS(buffer);
+      if (cleaned) {
+        fullHtml += cleaned;
+        writer.write(encoder.encode(toSSE('chunk', cleaned)));
+      }
     }
 
     assignChapterHtml(chapters, fullHtml);

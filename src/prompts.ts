@@ -12,7 +12,8 @@ export function buildArticlePrompt(subtitles: string, userRequirements?: string)
 - 将内容划分为 5-8 个主题章节
 - 每个章节必须以 <section data-chapter-id="ch-N" data-title="章节标题"> 开头，章节编号从 ch-1 开始递增
 - 章节内以 <h2> 输出章节标题
-- 如果段落有对话性质，保留发言人标记，使用 <strong>标签包裹发言人姓名（如 Mark、Jen、John）
+- 不要包含任何 <style> 或 CSS 代码，只输出纯 HTML 标签
+- **关键：输出格式必须是完整的访谈对话**。每条发言以 <strong>发言人</strong>: 开头。如果转录文本中出现了"Mark 说""John 提问""Jen 表示"等第三人称描述，将其转换成直接的对话格式（<strong>Mark</strong>: 内容）
 - 正文使用 <p> 段落，重要观点可加 <strong> 高亮
 - 行文风格：专业但口语化，保留播客对话的自然感，避免教科书的生硬
 - 每个章节末尾应提炼该章节的核心观点（1-2句话），用 <blockquote> 包裹

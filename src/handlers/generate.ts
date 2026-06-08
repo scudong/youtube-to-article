@@ -6,9 +6,14 @@ import { toSSE, toSSEJSON } from '../lib/sse.js';
 import { buildArticlePrompt } from '../prompts.js';
 
 const CSS_BLOCK_RE = /<style[^>]*>[\s\S]*?<\/style>/gi;
+const DOCTYPE_RE = /<!DOCTYPE\s+html[^>]*>/gi;
 
-function stripCSS(html: string): string {
-  return html.replace(CSS_BLOCK_RE, '');
+function sanitizeHTML(html: string): string {
+  return html
+    .replace(CSS_BLOCK_RE, '')
+    .replace(DOCTYPE_RE, '')
+    .replace(/<p[^>]*>:\s*/gi, '<p>')
+    .replace(/<p[^>]*>：(?:\s*)/gi, '<p>');
 }
 
 interface GenerateBody {
@@ -99,7 +104,7 @@ async function processStream(
         const flushEnd = safePoint > 0 ? safePoint : buffer.length;
         const toFlush = buffer.slice(0, flushEnd);
 
-        const cleaned = stripCSS(toFlush);
+        const cleaned = sanitizeHTML(toFlush);
         if (cleaned) {
           fullHtml += cleaned;
           writer.write(encoder.encode(toSSE('chunk', cleaned)));
@@ -114,7 +119,7 @@ async function processStream(
     }
 
     if (buffer) {
-      const cleaned = stripCSS(buffer);
+      const cleaned = sanitizeHTML(buffer);
       if (cleaned) {
         fullHtml += cleaned;
         writer.write(encoder.encode(toSSE('chunk', cleaned)));

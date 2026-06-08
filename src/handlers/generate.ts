@@ -216,10 +216,14 @@ async function streamDemoArticle(
     }
 
     const fullHtml = parsed.map(c => c.html).join('\n');
-    for (const c of chapters) c.html = fullHtml;
+    // 按章节切分 html，使 5W1H 能精确定位到各章节内容
+    for (let i = 0; i < chapters.length; i++) {
+      chapters[i].html = parsed[i].html;
+    }
 
     const ttl = parseInt(env.CONTEXT_TTL_SECONDS, 10) || 3600;
-    const articleId = await saveContext(env.CONTEXT_KV, { subtitles: 'Demo', articleHtml: fullHtml, chapters }, ttl);
+    // subtitles 存原始 markdown，让 5W1H 能结合完整内容做分析
+    const articleId = await saveContext(env.CONTEXT_KV, { subtitles: DEMO_MARKDOWN, articleHtml: fullHtml, chapters }, ttl);
     writer.write(encoder.encode(toSSEJSON('done', { articleId })));
   } catch (err) {
     writer.write(encoder.encode(toSSEJSON('error', { code: 'DEMO_ERROR', message: err instanceof Error ? err.message : '' })));

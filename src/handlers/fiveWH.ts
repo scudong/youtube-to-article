@@ -29,7 +29,7 @@ export async function handleFiveWH(
     return json({ error: `章节 ${body.chapterId} 不存在` }, 404);
   }
 
-  const model = validateModel(body.model ?? 'gemini-2.5-pro');
+  const model = validateModel(body.model ?? 'gemini-2.5-flash');
   const prompt = build5W1HPrompt(
     context.subtitles,
     context.articleHtml,

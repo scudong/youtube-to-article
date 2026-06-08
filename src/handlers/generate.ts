@@ -26,7 +26,7 @@ export async function handleGenerate(
     });
   }
 
-  const model = validateModel(body.model ?? 'gemini-2.5-pro');
+  const model = validateModel(body.model ?? 'gemini-2.5-flash');
 
   let subtitles: string;
   try {
@@ -71,32 +71,39 @@ async function processStream(
   let buffer = '';
 
   try {
-    for await (const text of streamGenerate(env.GEMINI_API_KEY, params.model, prompt)) {
-      buffer += text;
+    try {
+      for await (const text of streamGenerate(env.GEMINI_API_KEY, params.model, prompt)) {
+        buffer += text;
 
-      const sectionRegex = /<section\s+data-chapter-id="([^"]+)"\s+data-title="([^"]+)"[^>]*>/g;
-      let match: RegExpExecArray | null;
+        const sectionRegex = /<section\s+data-chapter-id="([^"]+)"\s+data-title="([^"]+)"[^>]*>/g;
+        let match: RegExpExecArray | null;
 
-      while ((match = sectionRegex.exec(buffer)) !== null) {
-        const chapter: ChapterMeta = {
-          id: match[1],
-          title: match[2],
-          index: chapters.length,
-          html: '',
-        };
-        chapters.push(chapter);
-        writer.write(encoder.encode(toSSEJSON('chapter', { id: chapter.id, title: chapter.title, index: chapter.index })));
+        while ((match = sectionRegex.exec(buffer)) !== null) {
+          const chapter: ChapterMeta = {
+            id: match[1],
+            title: match[2],
+            index: chapters.length,
+            html: '',
+          };
+          chapters.push(chapter);
+          writer.write(encoder.encode(toSSEJSON('chapter', { id: chapter.id, title: chapter.title, index: chapter.index })));
+        }
+
+        const safePoint = buffer.lastIndexOf('<');
+        const flushEnd = safePoint > 0 ? safePoint : buffer.length;
+        const toFlush = buffer.slice(0, flushEnd);
+
+        if (toFlush) {
+          fullHtml += toFlush;
+          writer.write(encoder.encode(toSSE('chunk', toFlush)));
+        }
+        buffer = buffer.slice(flushEnd);
       }
-
-      const safePoint = buffer.lastIndexOf('<');
-      const flushEnd = safePoint > 0 ? safePoint : buffer.length;
-      const toFlush = buffer.slice(0, flushEnd);
-
-      if (toFlush) {
-        fullHtml += toFlush;
-        writer.write(encoder.encode(toSSE('chunk', toFlush)));
-      }
-      buffer = buffer.slice(flushEnd);
+    } catch (streamErr) {
+      // Gemini API 有时在流末尾发一段不完整的 JSON 导致 SDK 抛解析异常，
+      // 但如果内容已收到，这不算致命错误。检查是否有内容再决定。
+      if (!fullHtml && !buffer) throw streamErr;
+      // 有内容则忽略流的尾段错误，flush 剩余 buffer 后正常完成
     }
 
     if (buffer) {

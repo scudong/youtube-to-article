@@ -130,6 +130,10 @@
             生成文章
           </button>
         </div>
+        <label class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
+          <input type="checkbox" id="use-demo" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+          使用历史记录（预设文章，不调 API）
+        </label>
       </form>
 
       <div id="status" class="hidden mt-4 text-xs text-gray-400 leading-relaxed"></div>
@@ -203,13 +207,15 @@ form.addEventListener('submit', async (e) => {
   const url = document.getElementById('url').value.trim();
   const requirements = document.getElementById('requirements').value.trim() || undefined;
   const model = document.getElementById('model').value;
-  if (!url) return;
+  const useDemo = document.getElementById('use-demo').checked;
+
+  if (!useDemo && !url) return;
 
   articleEl.innerHTML = '';
   articleEl.classList.remove('hidden');
   emptyState.classList.add('hidden');
   errorEl.classList.add('hidden');
-  statusEl.textContent = '🔍 正在生成…';
+  statusEl.textContent = useDemo ? '📖 读取历史记录…' : '🔍 正在生成…';
   statusEl.classList.remove('hidden');
   submitBtn.disabled = true;
   currentArticleId = null;
@@ -221,7 +227,12 @@ form.addEventListener('submit', async (e) => {
     const resp = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ url, userRequirements: requirements, model }),
+      body: JSON.stringify({
+        url: url || 'demo',
+        userRequirements: requirements,
+        model,
+        useDemo,
+      }),
     });
     if (!resp.ok) {
       const err = await resp.json();

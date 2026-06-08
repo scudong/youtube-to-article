@@ -4,6 +4,8 @@ import { streamGenerate, validateModel } from '../lib/gemini.js';
 import { saveContext, type ChapterMeta } from '../lib/contextStore.js';
 import { toSSE, toSSEJSON } from '../lib/sse.js';
 import { buildArticlePrompt } from '../prompts.js';
+import { DEMO_MARKDOWN } from '../data/demoArticle.js';
+import { parseArticleMarkdown } from '../lib/markdownToHtml.js';
 
 const CSS_BLOCK_RE = /<style[^>]*>[\s\S]*?<\/style>/gi;
 const DOCTYPE_RE = /<!DOCTYPE\s+html[^>]*>/gi;
@@ -20,6 +22,7 @@ interface GenerateBody {
   url: string;
   userRequirements?: string;
   model?: string;
+  useDemo?: boolean;
 }
 
 export async function handleGenerate(
@@ -28,6 +31,10 @@ export async function handleGenerate(
   ctx: ExecutionContext,
 ): Promise<Response> {
   const body = await request.json<GenerateBody>();
+
+  if (body.useDemo) {
+    return handleDemoGenerate(env, ctx);
+  }
 
   const videoId = extractVideoId(body.url ?? '');
   if (!videoId) {
@@ -167,5 +174,56 @@ function assignChapterHtml(chapters: ChapterMeta[], html: string): void {
     if (sectionStart >= 0 && endIdx >= 0) {
       chapters[i].html = html.slice(sectionStart, endIdx + endTag.length);
     }
+  }
+}
+
+// ─── Demo mode ───
+
+async function handleDemoGenerate(
+  env: Env,
+  ctx: ExecutionContext,
+): Promise<Response> {
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+
+  ctx.waitUntil(streamDemoArticle(writer, encoder, env));
+
+  return new Response(readable, {
+    headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', 'x-accel-buffering': 'no' },
+  });
+}
+
+async function streamDemoArticle(
+  writer: WritableStreamDefaultWriter,
+  encoder: TextEncoder,
+  env: Env,
+): Promise<void> {
+  try {
+    const { chapters: parsed } = parseArticleMarkdown(DEMO_MARKDOWN);
+    const chapters: ChapterMeta[] = parsed.map((pc, i) => ({ id: pc.id, title: pc.title, index: i, html: '' }));
+
+    for (const ch of chapters) {
+      writer.write(encoder.encode(toSSEJSON('chapter', { id: ch.id, title: ch.title, index: ch.index })));
+    }
+
+    for (let i = 0; i < parsed.length; i++) {
+      const html = parsed[i].html;
+      for (let pos = 0; pos < html.length; pos += 60) {
+        writer.write(encoder.encode(toSSE('chunk', html.slice(pos, pos + 60))));
+        await new Promise(r => setTimeout(r, 8));
+      }
+    }
+
+    const fullHtml = parsed.map(c => c.html).join('\n');
+    for (const c of chapters) c.html = fullHtml;
+
+    const ttl = parseInt(env.CONTEXT_TTL_SECONDS, 10) || 3600;
+    const articleId = await saveContext(env.CONTEXT_KV, { subtitles: 'Demo', articleHtml: fullHtml, chapters }, ttl);
+    writer.write(encoder.encode(toSSEJSON('done', { articleId })));
+  } catch (err) {
+    writer.write(encoder.encode(toSSEJSON('error', { code: 'DEMO_ERROR', message: err instanceof Error ? err.message : '' })));
+  } finally {
+    await writer.close().catch(() => {});
   }
 }
